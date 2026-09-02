@@ -16,11 +16,12 @@ limitations under the License.
 {{- if .Values.global.datastore }}
 {{- /* Default connection port when not set: PostgreSQL 5432, MongoDB 27017 */}}
 {{- $defaultDatastorePort := ternary 27017 5432 (eq .Values.global.datastore.provider "mongodb") }}
-{{- $credentialsSecretName := include "nvsentinel.datastore.credentialsSecretName" . | trim }}
+{{- $mongoUriSecretName := include "nvsentinel.datastore.mongodbUriSecretName" . | trim }}
+{{- $postgresPasswordSecretName := include "nvsentinel.datastore.postgresPasswordSecretName" . | trim }}
 {{- /* External managed MongoDB: mongodbStore.enabled false. In-cluster (Tilt): mongodbStore.enabled true + connection-derived URI in ConfigMap unless Secret is set. */}}
 {{- $inClusterMongo := and .Values.global.mongodbStore (.Values.global.mongodbStore.enabled | default false) }}
 {{- if eq .Values.global.datastore.provider "mongodb" }}
-{{- if and (not $inClusterMongo) (eq $credentialsSecretName "") }}
+{{- if and (not $inClusterMongo) (eq $mongoUriSecretName "") }}
 {{- fail "global.datastore.credentialsFromSecret.name is required for external MongoDB (global.mongodbStore.enabled false); create a Secret with key MONGODB_URI (full connection string)" }}
 {{- end }}
 {{- $mongoExplicitUri := .Values.global.datastore.uri | default "" | trim }}
@@ -31,7 +32,7 @@ limitations under the License.
 {{- fail "global.datastore.uri is not supported for MongoDB when using global.datastore; use credentialsFromSecret or connection fields for in-cluster MongoDB" }}
 {{- end }}
 {{- end }}
-{{- if and (eq .Values.global.datastore.provider "postgresql") (eq $credentialsSecretName "") }}
+{{- if and (eq .Values.global.datastore.provider "postgresql") (eq $postgresPasswordSecretName "") }}
 {{- fail "global.datastore.credentialsFromSecret.name is required for PostgreSQL; create a Secret with key DATASTORE_PASSWORD" }}
 {{- end }}
 apiVersion: v1
@@ -134,7 +135,7 @@ data:
   # MongoDB — external: MONGODB_URI only from Secret (envFrom.secretRef).
   # In-cluster (global.mongodbStore.enabled): MONGODB_URI built from connection when no Secret is set.
   {{- if eq .Values.global.datastore.provider "mongodb" }}
-  {{- if ne $credentialsSecretName "" }}
+  {{- if ne $mongoUriSecretName "" }}
   {{- /* MONGODB_URI from Secret */}}
   {{- else if and $inClusterMongo .Values.global.datastore.connection .Values.global.datastore.connection.host }}
   {{- $mongodbURI := printf "mongodb://%s:%d/" .Values.global.datastore.connection.host (int (.Values.global.datastore.connection.port | default 27017)) }}

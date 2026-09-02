@@ -291,33 +291,41 @@ Use this only from charts that store the path under mongodbStore.
 {{- end -}}
 
 {{/*
-Name of the existing Secret that holds provider-specific datastore credentials.
-MongoDB expects MONGODB_URI; PostgreSQL expects DATASTORE_PASSWORD.
-Returns empty when unset.
+Name of existing Secret that holds MONGODB_URI for external MongoDB (provider mongodb).
+Required whenever global.datastore is enabled with provider mongodb. Returns empty when unset.
 */}}
-{{- define "nvsentinel.datastore.credentialsSecretName" -}}
+{{- define "nvsentinel.datastore.mongodbUriSecretName" -}}
 {{- if and .Values.global.datastore .Values.global.datastore.credentialsFromSecret .Values.global.datastore.credentialsFromSecret.name -}}
 {{- .Values.global.datastore.credentialsFromSecret.name | trim -}}
 {{- end -}}
 {{- end -}}
 
 {{/*
-Backward-compatible helper used by the external MongoDB validation path.
+Name of existing Secret that holds DATASTORE_PASSWORD for PostgreSQL.
+Required whenever global.datastore is enabled with provider postgresql. Returns empty when unset.
 */}}
-{{- define "nvsentinel.datastore.mongodbUriSecretName" -}}
-{{- include "nvsentinel.datastore.credentialsSecretName" . -}}
+{{- define "nvsentinel.datastore.postgresPasswordSecretName" -}}
+{{- if and .Values.global.datastore .Values.global.datastore.credentialsFromSecret .Values.global.datastore.credentialsFromSecret.name -}}
+{{- .Values.global.datastore.credentialsFromSecret.name | trim -}}
+{{- end -}}
 {{- end -}}
 
 {{/*
-Extra envFrom entry for provider credentials. The Secret keys must match the
-application environment variables: MONGODB_URI or DATASTORE_PASSWORD.
+Extra envFrom entry for datastore credentials. MongoDB Secrets must define
+MONGODB_URI; PostgreSQL Secrets must define DATASTORE_PASSWORD.
 Indent with nindent 12 to match sibling configMapRef under envFrom.
 */}}
 {{- define "nvsentinel.datastore.secretEnvFrom" -}}
-{{- $sn := include "nvsentinel.datastore.credentialsSecretName" . | trim -}}
-{{- if and .Values.global.datastore $sn }}
+{{- $mongoSecretName := include "nvsentinel.datastore.mongodbUriSecretName" . | trim -}}
+{{- if and .Values.global.datastore (eq .Values.global.datastore.provider "mongodb") $mongoSecretName }}
 - secretRef:
-    name: {{ $sn | quote }}
+    name: {{ $mongoSecretName | quote }}
+    optional: false
+{{- end }}
+{{- $postgresSecretName := include "nvsentinel.datastore.postgresPasswordSecretName" . | trim -}}
+{{- if and .Values.global.datastore (eq .Values.global.datastore.provider "postgresql") $postgresSecretName }}
+- secretRef:
+    name: {{ $postgresSecretName | quote }}
     optional: false
 {{- end }}
 {{- end -}}
