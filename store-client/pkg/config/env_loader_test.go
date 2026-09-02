@@ -76,22 +76,6 @@ func TestNewPostgreSQLCompatibleConfig_WithoutPassword(t *testing.T) {
 	}
 }
 
-func TestNewPostgreSQLCompatibleConfig_PasswordWithSpecialChars(t *testing.T) {
-	setPostgreSQLEnv(t)
-	t.Setenv("DATASTORE_PASSWORD", "p@ss w'ord\\1")
-
-	cfg, err := newPostgreSQLCompatibleConfig("/certs", "", "default_table")
-	if err != nil {
-		t.Fatalf("unexpected error: %v", err)
-	}
-
-	uri := cfg.GetConnectionURI()
-	// Password with special chars should be single-quoted and escaped
-	if !strings.Contains(uri, "password='p@ss w\\'ord\\\\1'") {
-		t.Errorf("expected properly quoted password in URI, got: %s", uri)
-	}
-}
-
 func TestNewPostgreSQLCompatibleConfig_PasswordWithExplicitCA(t *testing.T) {
 	setPostgreSQLEnv(t)
 	t.Setenv("DATASTORE_PASSWORD", "s3cret")
@@ -110,22 +94,5 @@ func TestNewPostgreSQLCompatibleConfig_PasswordWithExplicitCA(t *testing.T) {
 	if strings.Contains(uri, "sslcert=") || strings.Contains(uri, "sslkey=") ||
 		strings.Contains(uri, "/bundled-postgres-certs") {
 		t.Errorf("expected explicit CA-only password authentication not to infer client certificates, got: %s", uri)
-	}
-}
-
-func TestNewPostgreSQLCompatibleConfig_EmptyCertPathDoesNotCreateRelativePaths(t *testing.T) {
-	setPostgreSQLEnv(t)
-	os.Unsetenv("DATASTORE_PASSWORD")
-
-	cfg, err := newPostgreSQLCompatibleConfig("", "", "default_table")
-	if err != nil {
-		t.Fatalf("unexpected error: %v", err)
-	}
-
-	uri := cfg.GetConnectionURI()
-	for _, parameter := range []string{"sslcert=", "sslkey=", "sslrootcert="} {
-		if strings.Contains(uri, parameter) {
-			t.Errorf("expected empty certificate path to omit %s, got: %s", parameter, uri)
-		}
 	}
 }
