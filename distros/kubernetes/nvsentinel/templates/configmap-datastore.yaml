@@ -17,7 +17,6 @@ limitations under the License.
 {{- /* Default connection port when not set: PostgreSQL 5432, MongoDB 27017 */}}
 {{- $defaultDatastorePort := ternary 27017 5432 (eq .Values.global.datastore.provider "mongodb") }}
 {{- $mongoUriSecretName := include "nvsentinel.datastore.mongodbUriSecretName" . | trim }}
-{{- $postgresPasswordSecretName := include "nvsentinel.datastore.postgresPasswordSecretName" . | trim }}
 {{- /* External managed MongoDB: mongodbStore.enabled false. In-cluster (Tilt): mongodbStore.enabled true + connection-derived URI in ConfigMap unless Secret is set. */}}
 {{- $inClusterMongo := and .Values.global.mongodbStore (.Values.global.mongodbStore.enabled | default false) }}
 {{- if eq .Values.global.datastore.provider "mongodb" }}
@@ -31,9 +30,6 @@ limitations under the License.
 {{- if and $inClusterMongo $mongoExplicitUri }}
 {{- fail "global.datastore.uri is not supported for MongoDB when using global.datastore; use credentialsFromSecret or connection fields for in-cluster MongoDB" }}
 {{- end }}
-{{- end }}
-{{- if and (eq .Values.global.datastore.provider "postgresql") (eq $postgresPasswordSecretName "") }}
-{{- fail "global.datastore.credentialsFromSecret.name is required for PostgreSQL; create a Secret with key DATASTORE_PASSWORD" }}
 {{- end }}
 apiVersion: v1
 kind: ConfigMap

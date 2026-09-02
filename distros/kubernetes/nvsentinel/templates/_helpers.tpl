@@ -301,33 +301,33 @@ Required whenever global.datastore is enabled with provider mongodb. Returns emp
 {{- end -}}
 
 {{/*
-Name of existing Secret that holds DATASTORE_PASSWORD for PostgreSQL.
-Required whenever global.datastore is enabled with provider postgresql. Returns empty when unset.
+Extra envFrom entry for the configured datastore credentials Secret.
+Indent with nindent 12 to match sibling configMapRef under envFrom.
+*/}}
+{{- define "nvsentinel.datastore.secretEnvFrom" -}}
+{{- if .Values.global.datastore -}}
+{{- $sn := "" -}}
+{{- if eq .Values.global.datastore.provider "mongodb" -}}
+{{- $sn = include "nvsentinel.datastore.mongodbUriSecretName" . | trim -}}
+{{- else if eq .Values.global.datastore.provider "postgresql" -}}
+{{- $sn = include "nvsentinel.datastore.postgresPasswordSecretName" . | trim -}}
+{{- end -}}
+{{- if $sn }}
+- secretRef:
+    name: {{ $sn | quote }}
+    optional: false
+{{- end }}
+{{- end }}
+{{- end -}}
+
+{{/*
+Name of existing Secret that holds DATASTORE_PASSWORD for PostgreSQL password
+authentication. Returns empty when unset.
 */}}
 {{- define "nvsentinel.datastore.postgresPasswordSecretName" -}}
 {{- if and .Values.global.datastore .Values.global.datastore.credentialsFromSecret .Values.global.datastore.credentialsFromSecret.name -}}
 {{- .Values.global.datastore.credentialsFromSecret.name | trim -}}
 {{- end -}}
-{{- end -}}
-
-{{/*
-Extra envFrom entry for datastore credentials. MongoDB Secrets must define
-MONGODB_URI; PostgreSQL Secrets must define DATASTORE_PASSWORD.
-Indent with nindent 12 to match sibling configMapRef under envFrom.
-*/}}
-{{- define "nvsentinel.datastore.secretEnvFrom" -}}
-{{- $mongoSecretName := include "nvsentinel.datastore.mongodbUriSecretName" . | trim -}}
-{{- if and .Values.global.datastore (eq .Values.global.datastore.provider "mongodb") $mongoSecretName }}
-- secretRef:
-    name: {{ $mongoSecretName | quote }}
-    optional: false
-{{- end }}
-{{- $postgresSecretName := include "nvsentinel.datastore.postgresPasswordSecretName" . | trim -}}
-{{- if and .Values.global.datastore (eq .Values.global.datastore.provider "postgresql") $postgresSecretName }}
-- secretRef:
-    name: {{ $postgresSecretName | quote }}
-    optional: false
-{{- end }}
 {{- end -}}
 
 {{/*
