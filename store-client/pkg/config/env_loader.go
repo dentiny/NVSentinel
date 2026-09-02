@@ -278,15 +278,48 @@ func newPostgreSQLCompatibleConfig(certMountPath, tableEnvVar, defaultTable stri
 
 	port := getEnvWithDefault("DATASTORE_PORT", "5432")
 	sslmode := getEnvWithDefault("DATASTORE_SSLMODE", "require")
-	sslcert := getEnvWithDefault("DATASTORE_SSLCERT", filepath.Join(certMountPath, "tls.crt"))
-	sslkey := getEnvWithDefault("DATASTORE_SSLKEY", filepath.Join(certMountPath, "tls.key"))
-	sslrootcert := getEnvWithDefault("DATASTORE_SSLROOTCERT", filepath.Join(certMountPath, "ca.crt"))
-
 	password := os.Getenv("DATASTORE_PASSWORD")
 
+	// Explicit DATASTORE_SSL* settings always win. Only infer an mTLS client
+	// certificate from certMountPath when password authentication is not in use;
+	// chart-provided PostgreSQL paths point at the bundled database's self-signed
+	// certificates and must not be applied to an external password-authenticated
+	// server. Password users can still configure client certificates or a custom
+	// CA explicitly through DATASTORE_SSLCERT, DATASTORE_SSLKEY, and
+	// DATASTORE_SSLROOTCERT.
+	sslcert := os.Getenv("DATASTORE_SSLCERT")
+	sslkey := os.Getenv("DATASTORE_SSLKEY")
+	sslrootcert := os.Getenv("DATASTORE_SSLROOTCERT")
+
+	if password == "" && certMountPath != "" {
+		if sslcert == "" {
+			sslcert = filepath.Join(certMountPath, "tls.crt")
+		}
+
+		if sslkey == "" {
+			sslkey = filepath.Join(certMountPath, "tls.key")
+		}
+
+		if sslrootcert == "" {
+			sslrootcert = filepath.Join(certMountPath, "ca.crt")
+		}
+	}
+
 	// Build connection URI in PostgreSQL format
-	connectionURI := fmt.Sprintf("host=%s port=%s dbname=%s user=%s sslmode=%s sslcert=%s sslkey=%s sslrootcert=%s",
-		host, port, database, username, sslmode, sslcert, sslkey, sslrootcert)
+	connectionURI := fmt.Sprintf("host=%s port=%s dbname=%s user=%s sslmode=%s",
+		host, port, database, username, sslmode)
+
+	if sslcert != "" {
+		connectionURI += " sslcert=" + utils.QuotePQValue(sslcert)
+	}
+
+	if sslkey != "" {
+		connectionURI += " sslkey=" + utils.QuotePQValue(sslkey)
+	}
+
+	if sslrootcert != "" {
+		connectionURI += " sslrootcert=" + utils.QuotePQValue(sslrootcert)
+	}
 
 	if password != "" {
 		connectionURI += " password=" + utils.QuotePQValue(password)
