@@ -280,13 +280,8 @@ func newPostgreSQLCompatibleConfig(certMountPath, tableEnvVar, defaultTable stri
 	sslmode := getEnvWithDefault("DATASTORE_SSLMODE", "require")
 	password := os.Getenv("DATASTORE_PASSWORD")
 
-	// Explicit DATASTORE_SSL* settings always win. Only infer an mTLS client
-	// certificate from certMountPath when password authentication is not in use;
-	// chart-provided PostgreSQL paths point at the bundled database's self-signed
-	// certificates and must not be applied to an external password-authenticated
-	// server. Password users can still configure client certificates or a custom
-	// CA explicitly through DATASTORE_SSLCERT, DATASTORE_SSLKEY, and
-	// DATASTORE_SSLROOTCERT.
+	// Use explicit TLS settings when provided. Otherwise, infer certificates
+	// from certMountPath only for certificate-based authentication.
 	sslcert := os.Getenv("DATASTORE_SSLCERT")
 	sslkey := os.Getenv("DATASTORE_SSLKEY")
 	sslrootcert := os.Getenv("DATASTORE_SSLROOTCERT")
