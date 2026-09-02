@@ -238,6 +238,20 @@ true
 {{- end -}}
 
 {{/*
+Whether PostgreSQL should use the bundled client certificate. A credentials
+Secret selects password authentication instead.
+*/}}
+{{- define "nvsentinel.datastore.postgresClientCertEnabled" -}}
+{{- $isPostgres := and .Values.global.datastore (eq .Values.global.datastore.provider "postgresql") -}}
+{{- $hasPasswordSecret := and $isPostgres .Values.global.datastore.credentialsFromSecret .Values.global.datastore.credentialsFromSecret.name -}}
+{{- if and $isPostgres (not $hasPasswordSecret) -}}
+true
+{{- else -}}
+false
+{{- end -}}
+{{- end -}}
+
+{{/*
 Returns the effective MongoDB cert mount path for a pod.
 - Returns .Values.clientCertMountPath if explicitly set (covers x509 client-cert and CA-only modes).
 - Returns /etc/ssl/mongo-ca only for external MongoDB SCRAM + custom CA (caSecretName set,
@@ -248,6 +262,10 @@ Returns the effective MongoDB cert mount path for a pod.
 - Returns empty string otherwise.
 */}}
 {{- define "nvsentinel.mongodb.certMountPath" -}}
+{{- $isPostgresPassword := and .Values.global.datastore
+                                (eq .Values.global.datastore.provider "postgresql")
+                                (ne (include "nvsentinel.datastore.postgresClientCertEnabled" .) "true") -}}
+{{- if not $isPostgresPassword -}}
 {{- if .Values.clientCertMountPath -}}
 {{ .Values.clientCertMountPath }}
 {{- else -}}
@@ -265,6 +283,7 @@ Returns the effective MongoDB cert mount path for a pod.
   {{- end -}}
 {{- end -}}
 {{- end -}}
+{{- end -}}
 
 {{/*
 Same path resolution as nvsentinel.mongodb.certMountPath but reads
@@ -272,6 +291,10 @@ Same path resolution as nvsentinel.mongodb.certMountPath but reads
 Use this only from charts that store the path under mongodbStore.
 */}}
 {{- define "nvsentinel.mongodb.certMountPathFromMongoStore" -}}
+{{- $isPostgresPassword := and .Values.global.datastore
+                                (eq .Values.global.datastore.provider "postgresql")
+                                (ne (include "nvsentinel.datastore.postgresClientCertEnabled" .) "true") -}}
+{{- if not $isPostgresPassword -}}
 {{- if .Values.mongodbStore.clientCertMountPath -}}
 {{ .Values.mongodbStore.clientCertMountPath }}
 {{- else -}}
@@ -287,6 +310,7 @@ Use this only from charts that store the path under mongodbStore.
 /etc/ssl/mongo-ca
     {{- end -}}
   {{- end -}}
+{{- end -}}
 {{- end -}}
 {{- end -}}
 
