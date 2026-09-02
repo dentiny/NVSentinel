@@ -127,9 +127,12 @@ global:
   #   # Database provider. Supported values: "mongodb", "postgresql"
   #   provider: "mongodb"
   #
-  #   # --- MongoDB connection URI ---
-  #   # External MongoDB (global.mongodbStore.enabled false): full URI only via Secret
-  #   # key MONGODB_URI and credentialsFromSecret.name (envFrom.secretRef). Do not set uri.
+  #   # --- Runtime credentials ---
+  #   # Inject provider credentials from an existing Kubernetes Secret without
+  #   # placing them in this values file or the generated ConfigMap.
+  #   # External MongoDB expects key MONGODB_URI (the full connection string).
+  #   # PostgreSQL expects key DATASTORE_PASSWORD; host, database, username, and
+  #   # sslmode remain under connection below.
   #   # In-cluster + global.mongodbStore.enabled true: credential-free URI can be built from
   #   # connection.* in the ConfigMap unless credentialsFromSecret is set; see docs/external-datastore.md.
   #   credentialsFromSecret:
